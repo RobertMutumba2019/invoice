@@ -90,6 +90,78 @@
             </div>
         </div>
     </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($stats['total_credit_notes'] ?? 0) }}</div>
+                        <div class="stats-label">Credit Notes</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-undo"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($stats['total_stocks'] ?? 0) }}</div>
+                        <div class="stats-label">Total Stock Records</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-warehouse"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($stats['pending_stocks'] ?? 0) }}</div>
+                        <div class="stats-label">Pending Stock</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($stats['total_stock_decreases'] ?? 0) }}</div>
+                        <div class="stats-label">Stock Decreases</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-minus-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Charts Row -->

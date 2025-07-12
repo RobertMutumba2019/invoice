@@ -59,7 +59,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create access rights for admin
-        $pages = ['USERS', 'INVOICES', 'GOODS', 'DEPARTMENTS', 'DESIGNATIONS', 'REPORTS'];
+        $pages = ['USERS', 'INVOICES', 'GOODS', 'DEPARTMENTS', 'DESIGNATIONS', 'REPORTS', 'SETTINGS', 'STOCKS'];
         $rights = ['A', 'V', 'E', 'D']; // Add, View, Edit, Delete
 
         foreach ($pages as $page) {

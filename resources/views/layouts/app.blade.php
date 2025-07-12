@@ -111,11 +111,29 @@
                         </li>
                         @endif
                         
+                        @if(auth()->user()->hasAccess('INVOICES', 'V'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('credit-notes.*') ? 'active' : '' }}" href="{{ route('credit-notes.index') }}">
+                                <i class="fas fa-undo"></i>
+                                Credit Notes
+                            </a>
+                        </li>
+                        @endif
+                        
                         @if(auth()->user()->hasAccess('GOODS', 'V'))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('goods.*') ? 'active' : '' }}" href="{{ route('goods.index') }}">
                                 <i class="fas fa-box"></i>
                                 Goods & Services
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->hasAccess('STOCKS', 'V'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('stocks.*') ? 'active' : '' }}" href="{{ route('stocks.all') }}">
+                                <i class="fas fa-warehouse"></i>
+                                Stock Management
                             </a>
                         </li>
                         @endif
@@ -152,6 +170,15 @@
                             <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">
                                 <i class="fas fa-chart-bar"></i>
                                 Reports
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->hasAccess('SETTINGS', 'V'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">
+                                <i class="fas fa-cog"></i>
+                                Settings
                             </a>
                         </li>
                         @endif

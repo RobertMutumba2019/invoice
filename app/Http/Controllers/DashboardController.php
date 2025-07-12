@@ -6,6 +6,9 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Models\EfrisGood;
 use App\Models\AuditTrail;
+use App\Models\CreditNote;
+use App\Models\Stock;
+use App\Models\StockDecrease;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -66,6 +69,18 @@ class DashboardController extends Controller
             
             'total_goods' => EfrisGood::count(),
             'active_goods' => EfrisGood::active()->count(),
+            
+            'total_credit_notes' => CreditNote::count(),
+            'draft_credit_notes' => CreditNote::draft()->count(),
+            'submitted_credit_notes' => CreditNote::submitted()->count(),
+            'approved_credit_notes' => CreditNote::approved()->count(),
+            
+            'total_stocks' => Stock::count(),
+            'pending_stocks' => Stock::pending()->count(),
+            'approved_stocks' => Stock::approved()->count(),
+            'total_stock_decreases' => StockDecrease::count(),
+            'pending_stock_decreases' => StockDecrease::pending()->count(),
+            'approved_stock_decreases' => StockDecrease::approved()->count(),
         ];
     }
 

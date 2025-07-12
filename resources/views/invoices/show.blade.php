@@ -184,6 +184,14 @@
                     </form>
                 </div>
                 @endif
+                
+                @if($invoice->status === 'APPROVED')
+                <div class="d-grid gap-2">
+                    <a href="{{ route('credit-notes.create', ['invoice_id' => $invoice->invoice_id]) }}" class="btn btn-warning">
+                        <i class="fas fa-undo me-1"></i>Create Credit Note
+                    </a>
+                </div>
+                @endif
             </div>
         </div>
     </div>
