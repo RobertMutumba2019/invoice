@@ -203,7 +203,7 @@ class EfrisService
     /**
      * Get EFRIS configuration from settings.
      */
-    private function getEfrisConfig()
+    public function getEfrisConfig()
     {
         return [
             'api_url' => SystemSetting::getValue('efris_api_url', 'https://efris.ura.go.ug/efrisapi/api/'),

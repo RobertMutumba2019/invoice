@@ -126,6 +126,17 @@
                             </div>
                         </div>
                     @endif
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <a href="{{ route('stocks.qrcode', $stock->id) }}" class="btn btn-info me-2">
+                                <i class="fas fa-qrcode me-1"></i> View QR Code
+                            </a>
+                            <a href="{{ route('stocks.barcode', $stock->id) }}" class="btn btn-secondary">
+                                <i class="fas fa-barcode me-1"></i> View Barcode
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

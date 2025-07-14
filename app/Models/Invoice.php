@@ -14,6 +14,7 @@ class Invoice extends Model
     protected $fillable = [
         'invoice_no',
         'efris_invoice_no',
+        'customer_id',
         'buyer_tin',
         'buyer_name',
         'buyer_address',
@@ -45,6 +46,14 @@ class Invoice extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the customer for this invoice.
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     /**

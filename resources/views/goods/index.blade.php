@@ -106,6 +106,12 @@
                                    class="btn btn-sm btn-outline-primary" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <a href="{{ route('goods.qrcode', $good->eg_id) }}" class="btn btn-sm btn-outline-info" title="QR Code">
+                                    <i class="fas fa-qrcode"></i>
+                                </a>
+                                <a href="{{ route('goods.barcode', $good->eg_id) }}" class="btn btn-sm btn-outline-secondary" title="Barcode">
+                                    <i class="fas fa-barcode"></i>
+                                </a>
                                 
                                 @if(auth()->user()->hasAccess('GOODS', 'E'))
                                 <a href="{{ route('goods.edit', $good->eg_id) }}" 

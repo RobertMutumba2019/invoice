@@ -138,11 +138,38 @@
                         </li>
                         @endif
                         
+                        @if(auth()->user()->hasAccess('CUSTOMERS', 'V'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}">
+                                <i class="fas fa-user-tie"></i>
+                                Customers
+                            </a>
+                        </li>
+                        @endif
+                        
                         @if(auth()->user()->hasAccess('USERS', 'V'))
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('users*') ? 'active' : '' }}" href="{{ route('users') }}">
+                            <a class="nav-link {{ request()->routeIs('users*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                                 <i class="fas fa-users"></i>
                                 Users
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->hasPermission('ROLES_VIEW'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
+                                <i class="fas fa-user-shield"></i>
+                                Roles
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->hasPermission('PERMISSIONS_VIEW'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" href="{{ route('permissions.index') }}">
+                                <i class="fas fa-key"></i>
+                                Permissions
                             </a>
                         </li>
                         @endif
@@ -179,6 +206,15 @@
                             <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">
                                 <i class="fas fa-cog"></i>
                                 Settings
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->hasAccess('SETTINGS', 'V'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('efris.*') ? 'active' : '' }}" href="{{ route('efris.settings') }}">
+                                <i class="fas fa-plug"></i>
+                                EFRIS API
                             </a>
                         </li>
                         @endif

@@ -155,6 +155,13 @@
                     </a>
                     @endif
                     
+                    <a href="{{ route('goods.qrcode', $good->eg_id) }}" class="btn btn-info">
+                        <i class="fas fa-qrcode me-1"></i> View QR Code
+                    </a>
+                    <a href="{{ route('goods.barcode', $good->eg_id) }}" class="btn btn-secondary">
+                        <i class="fas fa-barcode me-1"></i> View Barcode
+                    </a>
+                    
                     <form method="POST" action="{{ route('goods.toggle-status', $good->eg_id) }}" class="d-grid">
                         @csrf
                         <button type="submit" class="btn btn-{{ $good->eg_active ? 'warning' : 'success' }}">

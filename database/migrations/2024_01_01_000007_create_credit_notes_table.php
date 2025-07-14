@@ -32,13 +32,13 @@ return new class extends Migration
             $table->string('fdn')->nullable()->comment('EFRIS FDN');
             $table->string('qr_code')->nullable()->comment('QR Code');
             $table->text('efris_response')->nullable()->comment('EFRIS API Response');
-            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
 
             $table->foreign('original_invoice_id')->references('invoice_id')->on('invoices')->onDelete('cascade');
-            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('created_by')->references('id')->on('users');
+            $table->foreign('updated_by')->references('id')->on('users');
 
             $table->index(['cn_no', 'status']);
             $table->index('original_invoice_id');

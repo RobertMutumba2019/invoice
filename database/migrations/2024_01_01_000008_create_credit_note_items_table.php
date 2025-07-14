@@ -27,7 +27,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('credit_note_id')->references('cn_id')->on('credit_notes')->onDelete('cascade');
-            $table->foreign('original_item_id')->references('id')->on('invoice_items')->onDelete('set null');
+            $table->foreign('original_item_id')->references('id')->on('invoice_items');
 
             $table->index('credit_note_id');
         });

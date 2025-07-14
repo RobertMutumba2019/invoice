@@ -57,7 +57,7 @@ class InvoiceController extends Controller
     public function create()
     {
         $goods = EfrisGood::active()->get();
-        
+
         return view('invoices.create', compact('goods'));
     }
 
@@ -104,7 +104,7 @@ class InvoiceController extends Controller
     public function show($id)
     {
         $invoice = Invoice::with(['creator', 'items.good'])->findOrFail($id);
-        
+
         return view('invoices.show', compact('invoice'));
     }
 
@@ -266,7 +266,7 @@ class InvoiceController extends Controller
     public function getGoods(Request $request)
     {
         $search = $request->get('search');
-        
+
         $goods = EfrisGood::active()
             ->when($search, function ($query) use ($search) {
                 $query->search($search);
@@ -283,7 +283,7 @@ class InvoiceController extends Controller
     public function print($id)
     {
         $invoice = Invoice::with(['creator', 'items.good'])->findOrFail($id);
-        
+
         return view('invoices.print', compact('invoice'));
     }
-} 
+}

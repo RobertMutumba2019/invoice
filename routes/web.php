@@ -11,6 +11,11 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\EfrisApiController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +47,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/invoice-stats-by-type', [DashboardController::class, 'getInvoiceStatsByType']);
     Route::get('/dashboard/invoice-stats-by-status', [DashboardController::class, 'getInvoiceStatsByStatus']);
     Route::get('/dashboard/user-activity-stats', [DashboardController::class, 'getUserActivityStats']);
+    Route::get('/dashboard/customer-stats', [DashboardController::class, 'getCustomerStats']);
+    
+    // EFRIS API Routes
+    Route::prefix('efris')->name('efris.')->group(function () {
+        Route::get('/settings', [EfrisApiController::class, 'settings'])->name('settings');
+        Route::put('/settings', [EfrisApiController::class, 'updateSettings'])->name('settings.update');
+        Route::get('/test-connection', [EfrisApiController::class, 'testConnection'])->name('test-connection');
+        Route::get('/get-status', [EfrisApiController::class, 'getStatus'])->name('get-status');
+        Route::get('/validate-config', [EfrisApiController::class, 'validateConfig'])->name('validate-config');
+        Route::get('/get-logs', [EfrisApiController::class, 'getLogs'])->name('get-logs');
+        Route::get('/test-page', function () {
+            return view('efris.test');
+        })->name('test-page');
+    });
     
     // Invoice Routes
     Route::resource('invoices', InvoiceController::class)->parameters(['invoices' => 'id']);
@@ -83,12 +102,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/goods/{id}/toggle-status', [GoodsController::class, 'toggleStatus'])->name('goods.toggle-status');
     
     // User Management Routes
-    Route::get('/users', [AuthController::class, 'users'])->name('users');
-    Route::get('/users/add', [AuthController::class, 'showAddUser'])->name('users.add');
-    Route::post('/users', [AuthController::class, 'storeUser'])->name('users.store');
-    Route::get('/users/{id}/edit', [AuthController::class, 'showEditUser'])->name('users.edit');
-    Route::put('/users/{id}', [AuthController::class, 'updateUser'])->name('users.update');
-    Route::delete('/users/{id}', [AuthController::class, 'deleteUser'])->name('users.delete');
+    Route::resource('users', UserController::class)->parameters(['users' => 'id']);
+    Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::get('/users/{id}/roles', [UserController::class, 'getRoles'])->name('users.roles');
+    Route::get('/users/{id}/permissions', [UserController::class, 'getPermissions'])->name('users.permissions');
+    Route::post('/users/bulk-assign-roles', [UserController::class, 'bulkAssignRoles'])->name('users.bulk-assign-roles');
+    
+    // Customer Management Routes
+    Route::resource('customers', CustomerController::class)->parameters(['customers' => 'id']);
+    Route::post('/customers/{id}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
+    Route::get('/customers/{id}/statement', [CustomerController::class, 'statement'])->name('customers.statement');
+    Route::get('/customers/search/ajax', [CustomerController::class, 'search'])->name('customers.search.ajax');
     
     // Change Password
     Route::get('/change-password', [AuthController::class, 'showChangePassword'])->name('change-password');
@@ -99,6 +123,20 @@ Route::middleware(['auth'])->group(function () {
     
     // Designation Routes
     Route::resource('designations', DesignationController::class)->parameters(['designations' => 'id']);
+    
+    // Role Management Routes
+    Route::resource('roles', RoleController::class)->parameters(['roles' => 'id']);
+    Route::post('/roles/{id}/toggle-status', [RoleController::class, 'toggleStatus'])->name('roles.toggle-status');
+    Route::get('/roles/{id}/permissions', [RoleController::class, 'getPermissions'])->name('roles.permissions');
+    Route::get('/roles/{id}/users', [RoleController::class, 'getUsers'])->name('roles.users');
+    Route::post('/roles/{id}/duplicate', [RoleController::class, 'duplicate'])->name('roles.duplicate');
+    
+    // Permission Management Routes
+    Route::resource('permissions', PermissionController::class)->parameters(['permissions' => 'id']);
+    Route::post('/permissions/{id}/toggle-status', [PermissionController::class, 'toggleStatus'])->name('permissions.toggle-status');
+    Route::get('/permissions/grouped', [PermissionController::class, 'getGroupedPermissions'])->name('permissions.grouped');
+    Route::get('/permissions/{id}/roles', [PermissionController::class, 'getRoles'])->name('permissions.roles');
+    Route::post('/permissions/bulk-update', [PermissionController::class, 'bulkUpdate'])->name('permissions.bulk-update');
     
     // Report Routes
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -113,6 +151,45 @@ Route::middleware(['auth'])->group(function () {
         $result = $efrisService->testConnection();
         return response()->json($result);
     })->name('test.efris-connection');
+    
+    // Debug EFRIS status route
+    Route::get('/test/efris-status', function () {
+        try {
+            $efrisService = app(\App\Services\EfrisService::class);
+            $config = $efrisService->getEfrisConfig();
+            $connectionTest = $efrisService->testConnection();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'config' => $config,
+                    'connection' => $connectionTest,
+                    'last_updated' => now()->format('Y-m-d H:i:s')
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get EFRIS status: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('test.efris-status');
+    
+    // Simple debug route
+    Route::get('/debug/efris', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'Debug route working',
+            'timestamp' => now()->format('Y-m-d H:i:s')
+        ]);
+    })->name('debug.efris');
+    
+    // QR code and barcode routes for stocks
+    Route::get('/stocks/{id}/qrcode', [StockController::class, 'showQrCode'])->name('stocks.qrcode');
+    Route::get('/stocks/{id}/barcode', [StockController::class, 'showBarcode'])->name('stocks.barcode');
+    // QR code and barcode routes for goods
+    Route::get('/goods/{id}/qrcode', [GoodsController::class, 'showQrCode'])->name('goods.qrcode');
+    Route::get('/goods/{id}/barcode', [GoodsController::class, 'showBarcode'])->name('goods.barcode');
     
 });
 

@@ -10,6 +10,12 @@
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
+            <a href="{{ route('customers.create') }}" class="btn btn-sm btn-success">
+                <i class="fas fa-user-plus me-1"></i>Add Customer
+            </a>
+            <a href="{{ route('customers.index') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-users me-1"></i>View Customers
+            </a>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
                 <i class="fas fa-print me-1"></i>Print
             </button>
@@ -162,6 +168,78 @@
             </div>
         </div>
     </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($totalCustomers) }}</div>
+                        <div class="stats-label">Total Customers</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($customerStats['active']) }}</div>
+                        <div class="stats-label">Active Customers</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($customerStats['over_limit']) }}</div>
+                        <div class="stats-label">Over Credit Limit</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <div class="stats-number">{{ number_format($customerStats['near_limit']) }}</div>
+                        <div class="stats-label">Near Credit Limit</div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stats-icon">
+                            <i class="fas fa-exclamation-circle text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Charts Row -->
@@ -190,6 +268,37 @@
             </div>
             <div class="card-body">
                 <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Customer Type Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="customerTypeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-doughnut me-2"></i>
+                    Customer Category Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="customerCategoryChart" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -264,6 +373,88 @@
                             <p>No recent invoices</p>
                         </div>
                     @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Customers Section -->
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-tie me-2"></i>
+                    Recent Customers
+                </h5>
+                <a href="{{ route('customers.index') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-eye me-1"></i>View All Customers
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Customer Code</th>
+                                <th>Business Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Contact</th>
+                                <th>Credit Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($recentCustomers as $customer)
+                                <tr>
+                                    <td>{{ $customer->customer_code }}</td>
+                                    <td>
+                                        <a href="{{ route('customers.show', $customer->id) }}" class="text-decoration-none">
+                                            {{ $customer->business_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ $customer->customerTypeName }}</td>
+                                    <td>{{ $customer->customerCategoryName }}</td>
+                                    <td>
+                                        @if($customer->contact_person)
+                                            {{ $customer->contact_person }}<br>
+                                        @endif
+                                        @if($customer->email)
+                                            <small class="text-muted">{{ $customer->email }}</small>
+                                        @endif
+                                    </td>
+                                    <td>{!! $customer->credit_status_badge !!}</td>
+                                    <td>{{ $customer->created_at->format('M d, Y') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ route('customers.show', $customer->id) }}" 
+                                               class="btn btn-outline-info" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ route('customers.edit', $customer->id) }}" 
+                                               class="btn btn-outline-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ route('customers.statement', $customer->id) }}" 
+                                               class="btn btn-outline-success" title="Statement">
+                                                <i class="fas fa-receipt"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-user-tie fa-2x mb-2 d-block"></i>
+                                        No customers found
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -357,6 +548,70 @@ document.addEventListener('DOMContentLoaded', function() {
             plugins: {
                 legend: {
                     position: 'bottom',
+                }
+            }
+        }
+    });
+
+    // Customer Type Chart
+    const customerTypeCtx = document.getElementById('customerTypeChart').getContext('2d');
+    new Chart(customerTypeCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Individual', 'Company', 'Government', 'NGO'],
+            datasets: [{
+                data: [
+                    {{ $customerStats['customers_by_type']['individual'] ?? 0 }},
+                    {{ $customerStats['customers_by_type']['company'] ?? 0 }},
+                    {{ $customerStats['customers_by_type']['government'] ?? 0 }},
+                    {{ $customerStats['customers_by_type']['ngo'] ?? 0 }}
+                ],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Customer Category Chart
+    const customerCategoryCtx = document.getElementById('customerCategoryChart').getContext('2d');
+    new Chart(customerCategoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Regular', 'Wholesale', 'Retail', 'Export', 'VIP'],
+            datasets: [{
+                data: [
+                    {{ $customerStats['customers_by_category']['regular'] ?? 0 }},
+                    {{ $customerStats['customers_by_category']['wholesale'] ?? 0 }},
+                    {{ $customerStats['customers_by_category']['retail'] ?? 0 }},
+                    {{ $customerStats['customers_by_category']['export'] ?? 0 }},
+                    {{ $customerStats['customers_by_category']['vip'] ?? 0 }}
+                ],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
                 }
             }
         }

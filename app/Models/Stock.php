@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Stock extends Model
 {
@@ -16,6 +17,8 @@ class Stock extends Model
         'reference',
         'status',
         'remarks',
+        'qrcode_path',
+        'barcode_path',
         'created_by',
         'updated_by'
     ];
@@ -23,6 +26,22 @@ class Stock extends Model
     protected $casts = [
         'quantity' => 'decimal:2',
     ];
+
+    protected static function booted()
+    {
+        static::updating(function ($stock) {
+            if ($stock->isDirty('item_code')) {
+                if ($stock->qrcode_path && Storage::disk('public')->exists($stock->qrcode_path)) {
+                    Storage::disk('public')->delete($stock->qrcode_path);
+                }
+                if ($stock->barcode_path && Storage::disk('public')->exists($stock->barcode_path)) {
+                    Storage::disk('public')->delete($stock->barcode_path);
+                }
+                $stock->qrcode_path = null;
+                $stock->barcode_path = null;
+            }
+        });
+    }
 
     // Relationships
     public function creator()

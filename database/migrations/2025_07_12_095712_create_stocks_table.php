@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('updated_by')->references('id')->on('users');
             // You may want to add a foreign key for item_code if you have a goods table
         });
     }

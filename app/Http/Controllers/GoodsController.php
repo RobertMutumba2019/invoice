@@ -6,6 +6,9 @@ use App\Models\EfrisGood;
 use App\Models\AuditTrail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Milon\Barcode\Facades\DNS1DFacade as DNS1D;
+use Illuminate\Support\Facades\Storage;
 
 class GoodsController extends Controller
 {
@@ -150,5 +153,39 @@ class GoodsController extends Controller
         AuditTrail::register('GOOD_STATUS_CHANGED', "Good {$good->eg_name} {$status}", 'efris_goods');
 
         return back()->with('success', "Good {$status} successfully");
+    }
+
+    /**
+     * Display the QR code for a good.
+     */
+    public function showQrCode($id)
+    {
+        $good = EfrisGood::findOrFail($id);
+        $filename = 'qrcodes/good_' . $good->eg_id . '.png';
+        if (!$good->qrcode_path || !Storage::disk('public')->exists($good->qrcode_path)) {
+            $qrImage = \QrCode::format('png')->size(200)->generate($good->eg_code);
+            Storage::disk('public')->put($filename, $qrImage);
+            $good->qrcode_path = $filename;
+            $good->save();
+        }
+        $qrUrl = asset('storage/' . $good->qrcode_path);
+        return view('goods.qrcode', compact('good', 'qrUrl'));
+    }
+
+    /**
+     * Display the barcode for a good.
+     */
+    public function showBarcode($id)
+    {
+        $good = EfrisGood::findOrFail($id);
+        $filename = 'barcodes/good_' . $good->eg_id . '.png';
+        if (!$good->barcode_path || !Storage::disk('public')->exists($good->barcode_path)) {
+            $barcodeImage = \DNS1D::getBarcodePNG($good->eg_code, 'C128');
+            Storage::disk('public')->put($filename, base64_decode($barcodeImage));
+            $good->barcode_path = $filename;
+            $good->save();
+        }
+        $barcodeUrl = asset('storage/' . $good->barcode_path);
+        return view('goods.barcode', compact('good', 'barcodeUrl'));
     }
 } 

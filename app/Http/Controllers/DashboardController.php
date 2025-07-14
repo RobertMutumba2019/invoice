@@ -11,6 +11,7 @@ use App\Models\Stock;
 use App\Models\StockDecrease;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Customer;
 
 class DashboardController extends Controller
 {
@@ -19,28 +20,67 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Update user's last activity
-        auth()->user()->updateLastActivity();
-
         // Get dashboard statistics
         $stats = $this->getDashboardStats();
         
+        // Get individual variables for backward compatibility
+        $totalInvoices = Invoice::count();
+        $totalCreditNotes = CreditNote::count();
+        $totalGoods = EfrisGood::count();
+        $totalUsers = User::count();
+        $totalCustomers = Customer::count();
+        $totalStock = Stock::count();
+        $totalStockDecreases = StockDecrease::count();
+        
         // Get recent activities
-        $recentActivities = AuditTrail::with('user')
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+        $recentInvoices = Invoice::with(['creator'])->latest()->take(5)->get();
+        $recentCreditNotes = CreditNote::with(['creator'])->latest()->take(5)->get();
+        $recentCustomers = Customer::with(['creator'])->latest()->take(5)->get();
+        $recentActivities = AuditTrail::with(['user'])->latest()->take(10)->get();
 
-        // Get recent invoices
-        $recentInvoices = Invoice::with('creator')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
+        // Get customer statistics
+        $customerStats = [
+            'total' => Customer::count(),
+            'active' => Customer::active()->count(),
+            'inactive' => Customer::inactive()->count(),
+            'over_limit' => Customer::whereRaw('current_balance >= credit_limit')->count(),
+            'near_limit' => Customer::whereRaw('current_balance >= credit_limit * 0.8 AND current_balance < credit_limit')->count(),
+            'customers_by_type' => [
+                'individual' => Customer::byType('INDIVIDUAL')->count(),
+                'company' => Customer::byType('COMPANY')->count(),
+                'government' => Customer::byType('GOVERNMENT')->count(),
+                'ngo' => Customer::byType('NGO')->count(),
+            ],
+            'customers_by_category' => [
+                'regular' => Customer::byCategory('REGULAR')->count(),
+                'wholesale' => Customer::byCategory('WHOLESALE')->count(),
+                'retail' => Customer::byCategory('RETAIL')->count(),
+                'export' => Customer::byCategory('EXPORT')->count(),
+                'vip' => Customer::byCategory('VIP')->count(),
+            ],
+        ];
 
-        // Get monthly invoice chart data
+        // Get monthly chart data
+        $chartData = $this->getMonthlyInvoiceData();
         $monthlyInvoices = $this->getMonthlyInvoiceData();
 
-        return view('dashboard', compact('stats', 'recentActivities', 'recentInvoices', 'monthlyInvoices'));
+        return view('dashboard', compact(
+            'stats',
+            'totalInvoices', 
+            'totalCreditNotes', 
+            'totalGoods', 
+            'totalUsers',
+            'totalCustomers',
+            'totalStock',
+            'totalStockDecreases',
+            'recentInvoices',
+            'recentCreditNotes',
+            'recentCustomers',
+            'recentActivities',
+            'customerStats',
+            'chartData',
+            'monthlyInvoices'
+        ));
     }
 
     /**
@@ -151,8 +191,34 @@ class DashboardController extends Controller
         $stats = [
             'total_users' => User::count(),
             'active_users' => User::where('user_active', true)->count(),
-            'online_users' => User::where('user_online', true)->count(),
-            'users_this_month' => User::whereMonth('created_at', now()->month)->count(),
+            'inactive_users' => User::where('user_active', false)->count(),
+            'recent_logins' => User::where('user_last_changed', '>=', now()->subDays(7))->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    public function getCustomerStats()
+    {
+        $stats = [
+            'total_customers' => Customer::count(),
+            'active_customers' => Customer::active()->count(),
+            'inactive_customers' => Customer::inactive()->count(),
+            'over_limit_customers' => Customer::whereRaw('current_balance >= credit_limit')->count(),
+            'near_limit_customers' => Customer::whereRaw('current_balance >= credit_limit * 0.8 AND current_balance < credit_limit')->count(),
+            'customers_by_type' => [
+                'individual' => Customer::byType('INDIVIDUAL')->count(),
+                'company' => Customer::byType('COMPANY')->count(),
+                'government' => Customer::byType('GOVERNMENT')->count(),
+                'ngo' => Customer::byType('NGO')->count(),
+            ],
+            'customers_by_category' => [
+                'regular' => Customer::byCategory('REGULAR')->count(),
+                'wholesale' => Customer::byCategory('WHOLESALE')->count(),
+                'retail' => Customer::byCategory('RETAIL')->count(),
+                'export' => Customer::byCategory('EXPORT')->count(),
+                'vip' => Customer::byCategory('VIP')->count(),
+            ],
         ];
 
         return response()->json($stats);

@@ -14,27 +14,28 @@ class CreditNote extends Model
     protected $primaryKey = 'cn_id';
 
     protected $fillable = [
-        'cn_no',
-        'original_invoice_id',
-        'original_invoice_no',
-        'buyer_name',
+        'credit_note_no',
+        'efris_credit_note_no',
+        'customer_id',
+        'invoice_id',
+        'original_invoice_id', // <-- Added for mass assignment
+        'original_invoice_no', // <-- Added for mass assignment
         'buyer_tin',
+        'buyer_name',
         'buyer_address',
         'buyer_phone',
         'buyer_email',
-        'invoice_amount',
+        'credit_note_amount',
         'tax_amount',
         'total_amount',
         'currency',
-        'reason',
-        'reason_code',
+        'credit_note_type',
         'status',
-        'efris_cn_no',
-        'fdn',
+        'remarks',
         'qr_code',
-        'efris_response',
+        'fdn',
         'created_by',
-        'updated_by',
+        'credit_note_date',
     ];
 
     protected $casts = [
@@ -63,9 +64,17 @@ class CreditNote extends Model
     /**
      * Get the user who created this credit note.
      */
-    public function creator(): BelongsTo
+    public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the customer for this credit note.
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class EfrisGood extends Model
 {
@@ -15,6 +16,8 @@ class EfrisGood extends Model
         'eg_name',
         'eg_code',
         'eg_description',
+        'qrcode_path',
+        'barcode_path',
         'eg_price',
         'eg_uom',
         'eg_tax_category',
@@ -30,6 +33,22 @@ class EfrisGood extends Model
         'eg_active' => 'boolean',
         'eg_date_added' => 'datetime',
     ];
+
+    protected static function booted()
+    {
+        static::updating(function ($good) {
+            if ($good->isDirty('eg_code')) {
+                if ($good->qrcode_path && Storage::disk('public')->exists($good->qrcode_path)) {
+                    Storage::disk('public')->delete($good->qrcode_path);
+                }
+                if ($good->barcode_path && Storage::disk('public')->exists($good->barcode_path)) {
+                    Storage::disk('public')->delete($good->barcode_path);
+                }
+                $good->qrcode_path = null;
+                $good->barcode_path = null;
+            }
+        });
+    }
 
     /**
      * Get the user who added this good.

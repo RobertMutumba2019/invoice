@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Milon\Barcode\Facades\DNS1DFacade as DNS1D;
+use Illuminate\Support\Facades\Storage;
 
 class StockController extends Controller
 {
@@ -274,5 +277,39 @@ class StockController extends Controller
             ->where('status', 'approved')
             ->sum('quantity');
         return $stock - $decreases;
+    }
+
+    /**
+     * Display the QR code for a stock item.
+     */
+    public function showQrCode($id)
+    {
+        $stock = Stock::findOrFail($id);
+        $filename = 'qrcodes/stock_' . $stock->id . '.png';
+        if (!$stock->qrcode_path || !Storage::disk('public')->exists($stock->qrcode_path)) {
+            $qrImage = \QrCode::format('png')->size(200)->generate($stock->item_code);
+            Storage::disk('public')->put($filename, $qrImage);
+            $stock->qrcode_path = $filename;
+            $stock->save();
+        }
+        $qrUrl = asset('storage/' . $stock->qrcode_path);
+        return view('stocks.qrcode', compact('stock', 'qrUrl'));
+    }
+
+    /**
+     * Display the barcode for a stock item.
+     */
+    public function showBarcode($id)
+    {
+        $stock = Stock::findOrFail($id);
+        $filename = 'barcodes/stock_' . $stock->id . '.png';
+        if (!$stock->barcode_path || !Storage::disk('public')->exists($stock->barcode_path)) {
+            $barcodeImage = \DNS1D::getBarcodePNG($stock->item_code, 'C128');
+            Storage::disk('public')->put($filename, base64_decode($barcodeImage));
+            $stock->barcode_path = $filename;
+            $stock->save();
+        }
+        $barcodeUrl = asset('storage/' . $stock->barcode_path);
+        return view('stocks.barcode', compact('stock', 'barcodeUrl'));
     }
 }
