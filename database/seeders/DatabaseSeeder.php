@@ -43,20 +43,45 @@ class DatabaseSeeder extends Seeder
             Designation::create($desig);
         }
 
+        // Create roles
+        $adminRole = \App\Models\Role::updateOrCreate(
+            ['name' => 'admin'],
+            [
+                'display_name' => 'Administrator',
+                'description' => 'System Administrator',
+                'is_system' => true,
+                'is_active' => true,
+            ]
+        );
+
+        $userRole = \App\Models\Role::updateOrCreate(
+            ['name' => 'user'],
+            [
+                'display_name' => 'User',
+                'description' => 'Regular User',
+                'is_system' => false,
+                'is_active' => true,
+            ]
+        );
+
         // Create admin user
-        $admin = User::create([
-            'name' => 'System Administrator',
-            'user_name' => 'admin',
-            'user_surname' => 'System',
-            'user_othername' => 'Administrator',
-            'email' => 'admin@efris.com',
-            'user_phone' => '2560778497936',
-            'user_department_id' => Department::where('dept_name', 'IT')->first()->dept_id,
-            'user_designation' => Designation::where('designation_name', 'Administrator')->first()->designation_id,
-            'password' => Hash::make('Admin@2025'),
-            'user_active' => true,
-            'user_last_changed' => now(),
-        ]);
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@efris.com'],
+            [
+                'name' => 'System Administrator',
+                'user_name' => 'admin',
+                'user_surname' => 'System',
+                'user_othername' => 'Administrator',
+                'user_phone' => '2560778497936',
+                'user_department_id' => Department::where('dept_name', 'IT')->first()->dept_id,
+                'user_designation' => Designation::where('designation_name', 'Administrator')->first()->designation_id,
+                'password' => Hash::make('Admin@2025'),
+                'user_active' => true,
+                'user_last_changed' => now(),
+            ]
+        );
+        // Assign admin role to admin user
+        $admin->roles()->syncWithoutDetaching([$adminRole->id]);
 
         // Create access rights for admin
         $pages = ['USERS', 'INVOICES', 'GOODS', 'DEPARTMENTS', 'DESIGNATIONS', 'REPORTS', 'SETTINGS', 'STOCKS'];
@@ -64,12 +89,16 @@ class DatabaseSeeder extends Seeder
 
         foreach ($pages as $page) {
             foreach ($rights as $right) {
-                AccessRight::create([
-                    'user_id' => $admin->id,
-                    'page_name' => $page,
-                    'right_type' => $right,
-                    'active' => true,
-                ]);
+                AccessRight::updateOrCreate(
+                    [
+                        'user_id' => $admin->id,
+                        'page_name' => $page,
+                        'right_type' => $right,
+                    ],
+                    [
+                        'active' => true,
+                    ]
+                );
             }
         }
 
@@ -114,10 +143,13 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($goods as $good) {
-            EfrisGood::create(array_merge($good, [
-                'eg_added_by' => $admin->id,
-                'eg_date_added' => now(),
-            ]));
+            EfrisGood::updateOrCreate(
+                ['eg_code' => $good['eg_code']],
+                array_merge($good, [
+                    'eg_added_by' => $admin->id,
+                    'eg_date_added' => now(),
+                ])
+            );
         }
 
         // Create sample regular user
@@ -139,12 +171,16 @@ class DatabaseSeeder extends Seeder
         $userPages = ['INVOICES', 'GOODS'];
         foreach ($userPages as $page) {
             foreach (['V', 'E'] as $right) { // View and Edit only
-                AccessRight::create([
-                    'user_id' => $user->id,
-                    'page_name' => $page,
-                    'right_type' => $right,
-                    'active' => true,
-                ]);
+                AccessRight::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'page_name' => $page,
+                        'right_type' => $right,
+                    ],
+                    [
+                        'active' => true,
+                    ]
+                );
             }
         }
     }

@@ -3,6 +3,17 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@if (!isset($stats) || !isset($customerStats) || !isset($totalInvoices))
+    <div class="alert alert-danger">
+        <strong>Dashboard Error:</strong> One or more required variables are missing.<br>
+        Please check that the DashboardController passes all required data to the view.<br>
+        <ul>
+            @if (!isset($stats))<li><code>$stats</code> is missing</li>@endif
+            @if (!isset($customerStats))<li><code>$customerStats</code> is missing</li>@endif
+            @if (!isset($totalInvoices))<li><code>$totalInvoices</code> is missing</li>@endif
+        </ul>
+    </div>
+@else
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="fas fa-tachometer-alt me-2"></i>
@@ -460,6 +471,7 @@
         </div>
     </div>
 </div>
+@endif
 @endsection
 
 @push('scripts')
