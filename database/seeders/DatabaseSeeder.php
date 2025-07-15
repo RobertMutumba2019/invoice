@@ -27,7 +27,10 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($departments as $dept) {
-            Department::create($dept);
+            Department::updateOrCreate(
+                ['dept_name' => $dept['dept_name']],
+                ['dept_description' => $dept['dept_description']]
+            );
         }
 
         // Create designations
@@ -40,7 +43,10 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($designations as $desig) {
-            Designation::create($desig);
+            Designation::updateOrCreate(
+                ['designation_name' => $desig['designation_name']],
+                ['designation_description' => $desig['designation_description']]
+            );
         }
 
         // Create roles
@@ -153,19 +159,21 @@ class DatabaseSeeder extends Seeder
         }
 
         // Create sample regular user
-        $user = User::create([
-            'name' => 'John Doe',
-            'user_name' => 'johndoe',
-            'user_surname' => 'Doe',
-            'user_othername' => 'John',
-            'email' => 'john.doe@efris.com',
-            'user_phone' => '2560778497937',
-            'user_department_id' => Department::where('dept_name', 'Finance')->first()->dept_id,
-            'user_designation' => Designation::where('designation_name', 'Officer')->first()->designation_id,
-            'password' => Hash::make('password'),
-            'user_active' => true,
-            'user_last_changed' => now(),
-        ]);
+        $user = User::updateOrCreate(
+            ['email' => 'john.doe@efris.com'],
+            [
+                'name' => 'John Doe',
+                'user_name' => 'johndoe',
+                'user_surname' => 'Doe',
+                'user_othername' => 'John',
+                'user_phone' => '2560778497937',
+                'user_department_id' => Department::where('dept_name', 'Finance')->first()->dept_id,
+                'user_designation' => Designation::where('designation_name', 'Officer')->first()->designation_id,
+                'password' => Hash::make('password'),
+                'user_active' => true,
+                'user_last_changed' => now(),
+            ]
+        );
 
         // Create limited access rights for regular user
         $userPages = ['INVOICES', 'GOODS'];

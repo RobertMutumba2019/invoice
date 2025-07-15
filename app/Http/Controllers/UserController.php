@@ -86,48 +86,31 @@ class UserController extends Controller
             'user_designation' => 'nullable|exists:designations,designation_id',
             'roles' => 'array',
             'roles.*' => 'exists:roles,id',
-            'primary_role' => 'nullable|exists:roles,id',
         ]);
 
-        try {
-            DB::beginTransaction();
+        // Fix: Always set the 'name' field
+        $user = User::create([
+            'name' => $request->user_surname . ' ' . $request->user_othername,
+            'user_name' => $request->user_name,
+            'user_surname' => $request->user_surname,
+            'user_othername' => $request->user_othername,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'user_phone' => $request->user_phone,
+            'user_department_id' => $request->user_department_id,
+            'user_designation' => $request->user_designation,
+            'user_active' => true,
+            'user_online' => false,
+            'user_forgot_password' => false,
+            'user_last_changed' => now(),
+        ]);
 
-            $user = User::create([
-                'user_name' => $request->user_name,
-                'user_surname' => $request->user_surname,
-                'user_othername' => $request->user_othername,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'user_phone' => $request->user_phone,
-                'user_department_id' => $request->user_department_id,
-                'user_designation' => $request->user_designation,
-                'user_active' => true,
-                'user_online' => false,
-                'user_forgot_password' => false,
-            ]);
-
-            // Assign roles
-            if ($request->has('roles')) {
-                $user->assignRoles($request->roles);
-                
-                // Set primary role
-                if ($request->primary_role) {
-                    $user->setPrimaryRole($request->primary_role);
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('users.index')
-                ->with('success', 'User created successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to create user: ' . $e->getMessage());
-            
-            return redirect()->back()
-                ->with('error', 'Failed to create user: ' . $e->getMessage())
-                ->withInput();
+        // Assign roles if provided
+        if ($request->filled('roles')) {
+            $user->roles()->sync($request->roles);
         }
+
+        return redirect()->route('users.index')->with('success', 'User created successfully');
     }
 
     /**
