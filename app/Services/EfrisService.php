@@ -9,6 +9,7 @@ use App\Models\AuditTrail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\SystemSetting;
+use Carbon\Carbon;
 
 class EfrisService
 {
@@ -206,7 +207,7 @@ class EfrisService
     public function getEfrisConfig()
     {
         return [
-            'api_url' => SystemSetting::getValue('efris_api_url', 'https://efris.ura.go.ug/efrisapi/api/'),
+            'api_url' => SystemSetting::getValue('efris_api_url', 'http://127.0.0.1:9880/efristcs/ws/tcsapp/getInformation'),
             'tin' => SystemSetting::getValue('efris_tin', '1000023516'),
             'business_name' => SystemSetting::getValue('efris_business_name', 'CIVIL AVIATION AUTHORITY'),
             'device_number' => SystemSetting::getValue('efris_device_number', 'TCS5a2ce23154445074'),
@@ -267,69 +268,72 @@ class EfrisService
             'items' => $items
         ]);
 
+        $contentArray = [
+            'basicInformation' => [
+                'invoiceNo' => $invoice->invoice_no,
+                'invoiceDate' => $invoice->invoice_date->format('Y-m-d H:i:s'),
+                'currency' => $invoice->currency,
+                'operator' => auth()->user()->user_name,
+            ],
+            'sellerInformation' => [
+                'tin' => $config['tin'],
+                'ninBrn' => '4988',
+                'legalName' => 'UGANDA CIVIL AVIATION AUTHORITY',
+                'businessName' => $config['business_name'],
+                'address' => '',
+                'mobilePhone' => '2560778497936',
+                'linePhone' => '2560778497936',
+                'emailAddress' => 'nthakkar@ura.go.ug',
+                'placeOfBusiness' => '',
+            ],
+            'buyerInformation' => [
+                'tin' => $invoice->buyer_tin,
+                'ninBrn' => '',
+                'legalName' => $invoice->buyer_name,
+                'businessName' => $invoice->buyer_name,
+                'address' => $invoice->buyer_address,
+                'mobilePhone' => $invoice->buyer_phone,
+                'linePhone' => $invoice->buyer_phone,
+                'emailAddress' => $invoice->buyer_email,
+                'placeOfBusiness' => '',
+            ],
+            'goodsDetails' => $items,
+            'summary' => [
+                'grossAmount' => $invoice->invoice_amount,
+                'taxAmount' => $invoice->tax_amount,
+                'netAmount' => $invoice->total_amount,
+                'remarks' => $invoice->remarks,
+            ],
+        ];
+        $base64Content = base64_encode(json_encode($contentArray));
         return [
             'data' => [
-                'content' => [
-                    'basicInformation' => [
-                        'invoiceNo' => $invoice->invoice_no,
-                        'invoiceDate' => $invoice->invoice_date->format('Y-m-d H:i:s'),
-                        'currency' => $invoice->currency,
-                        'operator' => auth()->user()->user_name,
-                    ],
-                    'sellerInformation' => [
-                        'tin' => $config['tin'],
-                        'ninBrn' => '4988',
-                        'legalName' => 'UGANDA CIVIL AVIATION AUTHORITY',
-                        'businessName' => $config['business_name'],
-                        'address' => '',
-                        'mobilePhone' => '2560778497936',
-                        'linePhone' => '2560778497936',
-                        'emailAddress' => 'nthakkar@ura.go.ug',
-                        'placeOfBusiness' => '',
-                    ],
-                    'buyerInformation' => [
-                        'tin' => $invoice->buyer_tin,
-                        'ninBrn' => '',
-                        'legalName' => $invoice->buyer_name,
-                        'businessName' => $invoice->buyer_name,
-                        'address' => $invoice->buyer_address,
-                        'mobilePhone' => $invoice->buyer_phone,
-                        'linePhone' => $invoice->buyer_phone,
-                        'emailAddress' => $invoice->buyer_email,
-                        'placeOfBusiness' => '',
-                    ],
-                    'goodsDetails' => $items,
-                    'summary' => [
-                        'grossAmount' => $invoice->invoice_amount,
-                        'taxAmount' => $invoice->tax_amount,
-                        'netAmount' => $invoice->total_amount,
-                        'remarks' => $invoice->remarks,
-                    ],
-                ],
-                'signature' => '',
+                'content' => $base64Content,
+                'signature' => 'DUMMY_SIGNATURE',
                 'dataDescription' => [
-                    'codeType' => '0',
-                    'encryptCode' => '0',
+                    'codeType' => '1',
+                    'encryptCode' => '1',
                     'zipCode' => '0'
                 ]
             ],
             'globalInfo' => [
                 'appId' => 'AP04',
-                'brn' => '',
-                'dataExchangeId' => '9230489223014123',
+                'version' => '1.1.20191201',
+                'dataExchangeId' => str_replace('-', '', (string) \Str::uuid()),
+                'interfaceCode' => 'T109',
+                'requestCode' => 'TP',
+               'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+                'responseCode' => 'TA',
+                'userName' => 'admin',
                 'deviceMAC' => $config['device_mac'],
                 'deviceNo' => $config['device_number'],
-                'extendField' => '@@#####@@',
+                'tin' => $config['tin'],
+                'brn' => '',
+                'taxpayerID' => '1',
                 'longitude' => $config['longitude'],
                 'latitude' => $config['latitude'],
-                'interfaceCode' => 'T110',
-                'requestCode' => 'TP',
-                'requestTime' => now()->format('Y-m-d H:i:s'),
-                'responseCode' => 'TA',
-                'taxpayerID' => '723542954718704352',
-                'userName' => 'admin',
-                'tin' => $config['tin'],
-                'version' => '1.1.20191201'
+                'agentType' => '0',
+                'extendField' => new \stdClass(),
             ],
             'returnStateInfo' => [
                 'returnCode' => '',
@@ -518,7 +522,10 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T110',
                 'requestCode' => 'TP',
-                'requestTime' => now()->format('Y-m-d H:i:s'),
+                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+             
+
+              
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
                 'userName' => 'admin',
@@ -712,7 +719,9 @@ class EfrisService
                     'latitude' => $this->latitude,
                     'interfaceCode' => 'T128',
                     'requestCode' => 'TP',
-                    'requestTime' => now()->format('Y-m-d H:i:s'),
+                    'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+                    
+
                     'responseCode' => 'TA',
                     'taxpayerID' => '723542954718704352',
                     'userName' => 'admin',
@@ -806,7 +815,9 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T131',
                 'requestCode' => 'TP',
-                'requestTime' => now()->format('Y-m-d H:i:s'),
+                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+           
+
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
                 'userName' => 'admin',
@@ -862,7 +873,9 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T132',
                 'requestCode' => 'TP',
-                'requestTime' => now()->format('Y-m-d H:i:s'),
+                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+             
+
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
                 'userName' => 'admin',
@@ -875,4 +888,4 @@ class EfrisService
             ]
         ];
     }
-} 
+}
