@@ -121,18 +121,18 @@ class EfrisService
             }
 
             $payload = $this->buildEfrisPayload($invoice);
-            
+            $jsonPayload = json_encode($payload);
             Log::info('Submitting invoice to EFRIS', [
                 'invoice_id' => $invoice->invoice_id,
                 'invoice_no' => $invoice->invoice_no,
-                'api_url' => $config['api_url'] . 'submitInvoice',
-                'payload' => $payload
+                'api_url' => $config['api_url'],
+                'payload' => $jsonPayload
             ]);
             
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->timeout(30)->post($config['api_url'] . 'submitInvoice', $payload);
+            ])->timeout(30)->withBody($jsonPayload, 'application/json')->post($config['api_url']);
 
             Log::info('EFRIS API response received', [
                 'invoice_id' => $invoice->invoice_id,
