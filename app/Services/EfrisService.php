@@ -201,23 +201,27 @@ class EfrisService
         }
     }
 
-    /**
-     * Get EFRIS configuration from settings.
-     */
-    public function getEfrisConfig()
-    {
-        return [
-            'api_url' => SystemSetting::getValue('efris_api_url', 'http://127.0.0.1:9880/efristcs/ws/tcsapp/getInformation'),
-            'tin' => SystemSetting::getValue('efris_tin', '1000023516'),
-            'business_name' => SystemSetting::getValue('efris_business_name', 'CIVIL AVIATION AUTHORITY'),
-            'device_number' => SystemSetting::getValue('efris_device_number', 'TCS5a2ce23154445074'),
-            'device_mac' => SystemSetting::getValue('efris_device_mac', 'TCS2a80082879377106'),
-            'latitude' => SystemSetting::getValue('efris_latitude', '0.4061957'),
-            'longitude' => SystemSetting::getValue('efris_longitude', '32.643798'),
-            'currency' => SystemSetting::getValue('efris_default_currency', 'UGX'),
-            'vat_rate' => SystemSetting::getValue('efris_vat_rate', 18),
-        ];
-    }
+   
+
+  public function getEfrisConfig()
+{
+    return [
+        'api_url' => SystemSetting::getValue('efris_api_url', 'http://127.0.0.1:9880/efristcs/ws/tcsapp/getInformation'),
+        'tin' => SystemSetting::getValue('efris_tin', '1000023516'),
+        'business_name' => SystemSetting::getValue('efris_business_name', 'CIVIL AVIATION AUTHORITY'),
+        'address' => SystemSetting::getValue('efris_address', 'Default Address'), // Add this
+        'mobile_phone' => SystemSetting::getValue('efris_mobile_phone', '2560778497936'), // Add this
+        'line_phone' => SystemSetting::getValue('efris_line_phone', '2560778497936'), // Add this
+        'email_address' => SystemSetting::getValue('efris_email_address', 'nthakkar@ura.go.ug'), // Add this
+        'place_of_business' => SystemSetting::getValue('efris_place_of_business', 'Default Location'), // Add this
+        'device_number' => SystemSetting::getValue('efris_device_number', 'TCS8bb22b734414482'),
+        'device_mac' => SystemSetting::getValue('efris_device_mac', 'TCS2a80082879377106'),
+        'latitude' => SystemSetting::getValue('efris_latitude', '0.4061957'),
+        'longitude' => SystemSetting::getValue('efris_longitude', '32.643798'),
+        'currency' => SystemSetting::getValue('efris_default_currency', 'UGX'),
+        'vat_rate' => SystemSetting::getValue('efris_vat_rate', 18),
+    ];
+}
 
     /**
      * Test EFRIS API connection.
@@ -244,104 +248,122 @@ class EfrisService
      * Build EFRIS API payload.
      */
     protected function buildEfrisPayload($invoice)
-    {
-        $config = $this->getEfrisConfig();
-        
-        $items = [];
-        foreach ($invoice->items as $item) {
-            $items[] = [
-                'itemCode' => $item->item_code,
-                'itemName' => $item->item_name,
-                'qty' => $item->quantity,
-                'unitPrice' => $item->unit_price,
-                'total' => $item->total_amount,
-                'tax' => $item->tax_amount,
-                'orderNumber' => $invoice->invoice_no,
-                'uom' => $this->convertUOM($item->uom),
-                'taxRate' => $item->tax_rate,
-            ];
-        }
+{
+    $config = $this->getEfrisConfig();
+    
+    // Generate a unique reference number
+    $generatedReferenceNo = 'TCS' . str_replace('-', '', (string) \Str::uuid()) . substr((string) microtime(true), -4);
 
-        Log::info('Building EFRIS payload', [
-            'invoice_id' => $invoice->invoice_id,
-            'items_count' => count($items),
-            'items' => $items
-        ]);
-
-        $contentArray = [
-            'basicInformation' => [
-                'invoiceNo' => $invoice->invoice_no,
-                'invoiceDate' => $invoice->invoice_date->format('Y-m-d H:i:s'),
-                'currency' => $invoice->currency,
-                'operator' => auth()->user()->user_name,
-            ],
-            'sellerInformation' => [
-                'tin' => $config['tin'],
-                'ninBrn' => '4988',
-                'legalName' => 'UGANDA CIVIL AVIATION AUTHORITY',
-                'businessName' => $config['business_name'],
-                'address' => '',
-                'mobilePhone' => '2560778497936',
-                'linePhone' => '2560778497936',
-                'emailAddress' => 'nthakkar@ura.go.ug',
-                'placeOfBusiness' => '',
-            ],
-            'buyerInformation' => [
-                'tin' => $invoice->buyer_tin,
-                'ninBrn' => '',
-                'legalName' => $invoice->buyer_name,
-                'businessName' => $invoice->buyer_name,
-                'address' => $invoice->buyer_address,
-                'mobilePhone' => $invoice->buyer_phone,
-                'linePhone' => $invoice->buyer_phone,
-                'emailAddress' => $invoice->buyer_email,
-                'placeOfBusiness' => '',
-            ],
-            'goodsDetails' => $items,
-            'summary' => [
-                'grossAmount' => $invoice->invoice_amount,
-                'taxAmount' => $invoice->tax_amount,
-                'netAmount' => $invoice->total_amount,
-                'remarks' => $invoice->remarks,
-            ],
-        ];
-        $base64Content = base64_encode(json_encode($contentArray));
-        return [
-            'data' => [
-                'content' => $base64Content,
-                'signature' => 'DUMMY_SIGNATURE',
-                'dataDescription' => [
-                    'codeType' => '1',
-                    'encryptCode' => '1',
-                    'zipCode' => '0'
-                ]
-            ],
-            'globalInfo' => [
-                'appId' => 'AP04',
-                'version' => '1.1.20191201',
-                'dataExchangeId' => str_replace('-', '', (string) \Str::uuid()),
-                'interfaceCode' => 'T109',
-                'requestCode' => 'TP',
-               'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
-                'responseCode' => 'TA',
-                'userName' => 'admin',
-                'deviceMAC' => $config['device_mac'],
-                'deviceNo' => $config['device_number'],
-                'tin' => $config['tin'],
-                'brn' => '',
-                'taxpayerID' => '1',
-                'longitude' => $config['longitude'],
-                'latitude' => $config['latitude'],
-                'agentType' => '0',
-                'extendField' => new \stdClass(),
-            ],
-            'returnStateInfo' => [
-                'returnCode' => '',
-                'returnMessage' => ''
-            ]
+    $items = [];
+    foreach ($invoice->items as $item) {
+        $items[] = [
+            'itemCode' => $item->item_code,
+            'itemName' => $item->item_name,
+            'qty' => $item->quantity,
+            'unitPrice' => $item->unit_price,
+            'total' => $item->total_amount,
+            'tax' => $item->tax_amount,
+            'orderNumber' => $invoice->invoice_no,
+            'uom' => $this->convertUOM($item->uom),
+            'taxRate' => $item->tax_rate,
         ];
     }
 
+    $requestTime = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 12:16 PM EAT
+    $issuedDate = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // Match current time
+    Log::info('EFRIS Payload RequestTime and IssuedDate', [
+        'invoice_id' => $invoice->invoice_id,
+        'requestTime' => $requestTime,
+        'issuedDate' => $issuedDate,
+        'server_time' => date('Y-m-d H:i:s'),
+        'server_timezone' => date_default_timezone_get()
+    ]);
+
+    $contentArray = [
+        'basicInformation' => [
+            'invoiceNo' => $invoice->invoice_no,
+            'issuedDate' => $issuedDate, // Added issuedDate
+            'currency' => $invoice->currency,
+            'operator' => auth()->user()->user_name,
+            // Optionally keep invoiceDate if required by your logic
+            'invoiceDate' => $invoice->invoice_date->format('Y-m-d H:i:s'),
+        ],
+        'sellerDetails' => [
+            'tin' => $config['tin'],
+            'referenceNo' => $generatedReferenceNo,
+            'ninBrn' => '4988',
+            'legalName' => 'UGANDA CIVIL AVIATION AUTHORITY',
+            'businessName' => $config['business_name'],
+            'address' => $config['address'] ?? 'Default Address',
+            'mobilePhone' => $config['mobile_phone'] ?? '2560778497936',
+            'linePhone' => $config['line_phone'] ?? '2560778497936',
+            'emailAddress' => $config['email_address'] ?? 'nthakkar@ura.go.ug',
+            'placeOfBusiness' => $config['place_of_business'] ?? 'Default Location',
+        ],
+        'buyerDetails' => [
+            'tin' => $invoice->buyer_tin ?? $config['tin'],
+            'ninBrn' => $invoice->buyer_nin_brn ?? '',
+            'legalName' => $invoice->buyer_name ?? 'Unknown Buyer',
+            'businessName' => $invoice->buyer_name ?? 'Unknown Buyer',
+            'address' => $invoice->buyer_address ?? 'No Address Provided',
+            'mobilePhone' => $invoice->buyer_phone ?? 'Unknown',
+            'linePhone' => $invoice->buyer_phone ?? 'Unknown',
+            'emailAddress' => $invoice->buyer_email ?? 'no-email@default.com',
+            'placeOfBusiness' => $invoice->buyer_place_of_business ?? 'Unknown',
+        ],
+        'goodsDetails' => $items,
+        'summary' => [
+            'grossAmount' => $invoice->invoice_amount,
+            'taxAmount' => $invoice->tax_amount,
+            'netAmount' => $invoice->total_amount,
+            'remarks' => $invoice->remarks,
+        ],
+    ];
+
+    $base64Content = base64_encode(json_encode($contentArray));
+    Log::info('EFRIS Payload Content', [
+        'invoice_id' => $invoice->invoice_id,
+        'content_array' => $contentArray,
+        'base64_content' => $base64Content
+    ]);
+
+    return [
+        'data' => [
+            'content' => $base64Content,
+            'signature' => 'DUMMY_SIGNATURE',
+            'dataDescription' => [
+                'codeType' => '1',
+                'encryptCode' => '1',
+                'zipCode' => '0'
+            ]
+        ],
+        'globalInfo' => [
+            'appId' => 'AP04',
+            'version' => '1.1.20191201',
+            'dataExchangeId' => str_replace('-', '', (string) \Str::uuid()),
+            'interfaceCode' => 'T109',
+            'requestCode' => 'TP',
+            'requestTime' => $requestTime,
+            'responseCode' => 'TA',
+            'userName' => 'admin',
+            'deviceMAC' => $config['device_mac'],
+            'deviceNo' => $config['device_number'],
+            'tin' => $config['tin'],
+            'brn' => '',
+            'taxpayerID' => '1',
+            'longitude' => $config['longitude'],
+            'latitude' => $config['latitude'],
+            'agentType' => '0',
+            'extendField' => new \stdClass(),
+        ],
+        'returnStateInfo' => [
+            'returnCode' => '',
+            'returnMessage' => ''
+        ]
+    ];
+}
+
+ 
     /**
      * Submit credit note to EFRIS.
      */
@@ -522,10 +544,7 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T110',
                 'requestCode' => 'TP',
-                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
-             
-
-              
+                'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
                 'userName' => 'admin',
@@ -719,7 +738,7 @@ class EfrisService
                     'latitude' => $this->latitude,
                     'interfaceCode' => 'T128',
                     'requestCode' => 'TP',
-                    'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+                    'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
                     
 
                     'responseCode' => 'TA',
@@ -815,7 +834,7 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T131',
                 'requestCode' => 'TP',
-                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+                'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
            
 
                 'responseCode' => 'TA',
@@ -873,7 +892,7 @@ class EfrisService
                 'latitude' => $this->latitude,
                 'interfaceCode' => 'T132',
                 'requestCode' => 'TP',
-                'requestTime' => Carbon::now('UTC')->format('Y-m-d H:i:s'),
+                'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
              
 
                 'responseCode' => 'TA',
@@ -888,4 +907,4 @@ class EfrisService
             ]
         ];
     }
-}
+} 

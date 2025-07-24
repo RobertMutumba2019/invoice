@@ -23,6 +23,23 @@
     </div>
 </div>
 
+<div>
+<form method="POST" action="{{ route('getInvoiceStatus') }}">
+    @csrf
+    <input type="text" name="invoice_no" placeholder="Enter Invoice Number" required>
+    <button type="submit">Get Status</button>
+</form>
+</div>
+
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
+
+@if(isset($invoice))
+    <h3>Invoice Status</h3>
+    <pre>{{ print_r($invoice, true) }}</pre>
+@endif
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="fas fa-check-circle me-2"></i>

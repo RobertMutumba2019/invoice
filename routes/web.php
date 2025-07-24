@@ -57,6 +57,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/get-status', [EfrisApiController::class, 'getStatus'])->name('get-status');
         Route::get('/validate-config', [EfrisApiController::class, 'validateConfig'])->name('validate-config');
         Route::get('/get-logs', [EfrisApiController::class, 'getLogs'])->name('get-logs');
+        Route::post('/efris/get-invoice-status', [EfrisApiController::class, 'getInvoiceStatus'])->name('getInvoiceStatus');
         Route::get('/test-page', function () {
             return view('efris.test');
         })->name('test-page');

@@ -220,6 +220,25 @@ class EfrisApiController extends Controller
         }
     }
 
+    // Fetch Invoices
+   
+    public function getInvoiceStatus(Request $request)
+{
+    $invoiceNo = $request->input('invoice_no');
+    if (!$invoiceNo) {
+        return back()->with('error', 'Invoice number is required');
+    }
+
+    $efrisService = new \App\Services\EfrisService();
+    $result = $efrisService->fetchInvoiceStatus($invoiceNo);
+
+    if ($result['success']) {
+        return view('search_invoice', ['invoice' => $result['invoice']]);
+    } else {
+        return back()->with('error', $result['message'] ?? 'Unknown error');
+    }
+}
+
     /**
      * Get EFRIS API logs.
      */
