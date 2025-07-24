@@ -201,28 +201,38 @@ class EfrisService
         }
     }
 
-   
 
-  public function getEfrisConfig()
+    public function getEfrisConfig()
 {
     return [
         'api_url' => SystemSetting::getValue('efris_api_url', 'http://127.0.0.1:9880/efristcs/ws/tcsapp/getInformation'),
         'tin' => SystemSetting::getValue('efris_tin', '1000023516'),
         'business_name' => SystemSetting::getValue('efris_business_name', 'CIVIL AVIATION AUTHORITY'),
-        'address' => SystemSetting::getValue('efris_address', 'Default Address'), // Add this
-        'mobile_phone' => SystemSetting::getValue('efris_mobile_phone', '2560778497936'), // Add this
-        'line_phone' => SystemSetting::getValue('efris_line_phone', '2560778497936'), // Add this
-        'email_address' => SystemSetting::getValue('efris_email_address', 'nthakkar@ura.go.ug'), // Add this
-        'place_of_business' => SystemSetting::getValue('efris_place_of_business', 'Default Location'), // Add this
+        'address' => SystemSetting::getValue('efris_address', 'Default Address'),
+        'mobile_phone' => SystemSetting::getValue('efris_mobile_phone', '2560778497936'),
+        'line_phone' => SystemSetting::getValue('efris_line_phone', '2560778497936'),
+        'email_address' => SystemSetting::getValue('efris_email_address', 'nthakkar@ura.go.ug'),
+        'place_of_business' => SystemSetting::getValue('efris_place_of_business', 'Default Location'),
         'device_number' => SystemSetting::getValue('efris_device_number', 'TCS8bb22b734414482'),
         'device_mac' => SystemSetting::getValue('efris_device_mac', 'TCS2a80082879377106'),
         'latitude' => SystemSetting::getValue('efris_latitude', '0.4061957'),
         'longitude' => SystemSetting::getValue('efris_longitude', '32.643798'),
         'currency' => SystemSetting::getValue('efris_default_currency', 'UGX'),
         'vat_rate' => SystemSetting::getValue('efris_vat_rate', 18),
+        'invoice_type' => SystemSetting::getValue('efris_invoice_type', '1'),
+        'invoice_industry_code' => SystemSetting::getValue('efris_invoice_industry_code', '101'),
+        'antifake_code' => SystemSetting::getValue('efris_antifake_code', '12345678901234567890'),
+        'mode_code' => SystemSetting::getValue('efris_mode_code', '0'),
+        'qr_code' => SystemSetting::getValue('efris_qr_code', 'example.qrcode'),
+        'payment_mode' => SystemSetting::getValue('efris_payment_mode', '102'),
+        'operation_type' => SystemSetting::getValue('efris_operation_type', '101'),
+        'nin_brn' => SystemSetting::getValue('efris_nin_brn', '4988'),
+        'buyer_type' => SystemSetting::getValue('efris_buyer_type', '0'),
+        'non_resident_flag' => SystemSetting::getValue('efris_non_resident_flag', '0'),
+        'invoice_kind' => SystemSetting::getValue('efris_invoice_kind', '1'),
+        'is_batch' => SystemSetting::getValue('efris_is_batch', '0'),
     ];
 }
-
     /**
      * Test EFRIS API connection.
      */
@@ -247,6 +257,8 @@ class EfrisService
     /**
      * Build EFRIS API payload.
      */
+ 
+
     protected function buildEfrisPayload($invoice)
 {
     $config = $this->getEfrisConfig();
@@ -269,8 +281,8 @@ class EfrisService
         ];
     }
 
-    $requestTime = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 12:16 PM EAT
-    $issuedDate = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // Match current time
+    $requestTime = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 2025-07-24 13:19:00
+    $issuedDate = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 2025-07-24 13:19:00
     Log::info('EFRIS Payload RequestTime and IssuedDate', [
         'invoice_id' => $invoice->invoice_id,
         'requestTime' => $requestTime,
@@ -279,19 +291,30 @@ class EfrisService
         'server_timezone' => date_default_timezone_get()
     ]);
 
+    // Validate buyerTin
+    $buyerTin = $invoice->buyer_tin;
+    if (empty($buyerTin) && ($config['buyer_type'] ?? '0') === '0' && ($config['invoice_industry_code'] ?? '101') === '101' && ($config['non_resident_flag'] ?? '0') === '0') {
+        throw new \Exception('buyerTin cannot be empty when buyerType is 0, invoiceIndustry is 101, and nonResidentFlag is 0');
+    }
+
     $contentArray = [
         'basicInformation' => [
             'invoiceNo' => $invoice->invoice_no,
-            'issuedDate' => $issuedDate, // Added issuedDate
+            'issuedDate' => $issuedDate,
             'currency' => $invoice->currency,
             'operator' => auth()->user()->user_name,
-            // Optionally keep invoiceDate if required by your logic
             'invoiceDate' => $invoice->invoice_date->format('Y-m-d H:i:s'),
+            'invoiceKind' => $config['invoice_kind'] ?? '1',
+            'deviceNo' => $config['device_number'],
+            'invoiceType' => $config['invoice_type'] ?? '1',
+            'invoiceIndustryCode' => $config['invoice_industry_code'] ?? '101',
+            'isBatch' => $config['is_batch'] ?? '0',
+            'antifakeCode' => $config['antifake_code'] ?? '12345678901234567890',
         ],
         'sellerDetails' => [
             'tin' => $config['tin'],
             'referenceNo' => $generatedReferenceNo,
-            'ninBrn' => '4988',
+            'ninBrn' => $config['nin_brn'] ?? '4988',
             'legalName' => 'UGANDA CIVIL AVIATION AUTHORITY',
             'businessName' => $config['business_name'],
             'address' => $config['address'] ?? 'Default Address',
@@ -301,7 +324,7 @@ class EfrisService
             'placeOfBusiness' => $config['place_of_business'] ?? 'Default Location',
         ],
         'buyerDetails' => [
-            'tin' => $invoice->buyer_tin ?? $config['tin'],
+            'tin' => $buyerTin ?? '', // Use only if valid, otherwise empty
             'ninBrn' => $invoice->buyer_nin_brn ?? '',
             'legalName' => $invoice->buyer_name ?? 'Unknown Buyer',
             'businessName' => $invoice->buyer_name ?? 'Unknown Buyer',
@@ -310,6 +333,10 @@ class EfrisService
             'linePhone' => $invoice->buyer_phone ?? 'Unknown',
             'emailAddress' => $invoice->buyer_email ?? 'no-email@default.com',
             'placeOfBusiness' => $invoice->buyer_place_of_business ?? 'Unknown',
+            'buyerCitizenship' => $invoice->buyer_citizenship ?? 'UG-Uganda',
+            'buyerPlaceOfBusi' => $invoice->buyer_place_of_business ?? 'Unknown',
+            'buyerType' => $config['buyer_type'] ?? '0', // Added from Django
+            'nonResidentFlag' => $config['non_resident_flag'] ?? '0', // Added to control validation
         ],
         'goodsDetails' => $items,
         'summary' => [
@@ -317,7 +344,30 @@ class EfrisService
             'taxAmount' => $invoice->tax_amount,
             'netAmount' => $invoice->total_amount,
             'remarks' => $invoice->remarks,
+            'itemCount' => count($items),
+            'modeCode' => $config['mode_code'] ?? '0',
+            'qrCode' => $config['qr_code'] ?? 'example.qrcode',
         ],
+        'taxDetails' => [
+            [
+                'taxCategory' => 'Standard',
+                'netAmount' => $invoice->total_amount - $invoice->tax_amount,
+                'taxRate' => $invoice->items->first()->tax_rate ?? 0.18,
+                'taxAmount' => $invoice->tax_amount,
+                'grossAmount' => $invoice->invoice_amount,
+                'taxCategoryCode' => '01',
+            ],
+        ],
+        'payWay' => [
+            [
+                'paymentMode' => $config['payment_mode'] ?? '102',
+                'paymentAmount' => $invoice->invoice_amount,
+                'orderNumber' => 'a',
+            ],
+        ],
+        'operationType' => $config['operation_type'] ?? '101',
+        'supplierTin' => $config['tin'],
+        'supplierName' => $config['business_name'],
     ];
 
     $base64Content = base64_encode(json_encode($contentArray));
@@ -354,7 +404,7 @@ class EfrisService
             'longitude' => $config['longitude'],
             'latitude' => $config['latitude'],
             'agentType' => '0',
-            'extendField' => new \stdClass(),
+            'extendField' => new \StdClass(),
         ],
         'returnStateInfo' => [
             'returnCode' => '',
@@ -362,7 +412,6 @@ class EfrisService
         ]
     ];
 }
-
  
     /**
      * Submit credit note to EFRIS.

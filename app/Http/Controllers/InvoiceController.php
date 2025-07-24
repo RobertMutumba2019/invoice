@@ -66,9 +66,22 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
+        $efrisConfig = app(\App\Services\EfrisService::class)->getEfrisConfig();
         $validator = $request->validate([
             'buyer_name' => 'required|string|max:255',
-            'buyer_tin' => 'nullable|string|max:50',
+            'buyer_tin' => [
+                'nullable',
+                function ($attribute, $value, $fail) use ($efrisConfig) {
+                    if (
+                        ($efrisConfig['buyer_type'] ?? '0') === '0' &&
+                        ($efrisConfig['invoice_industry_code'] ?? '101') === '101' &&
+                        ($efrisConfig['non_resident_flag'] ?? '0') === '0' &&
+                        empty($value)
+                    ) {
+                        $fail('The buyer TIN is required for resident organizations in industry 101.');
+                    }
+                }
+            ],
             'buyer_address' => 'nullable|string',
             'buyer_phone' => 'nullable|string|max:20',
             'buyer_email' => 'nullable|email',
@@ -136,9 +149,22 @@ class InvoiceController extends Controller
                 ->with('error', 'Only draft invoices can be edited');
         }
 
+        $efrisConfig = app(\App\Services\EfrisService::class)->getEfrisConfig();
         $validator = $request->validate([
             'buyer_name' => 'required|string|max:255',
-            'buyer_tin' => 'nullable|string|max:50',
+            'buyer_tin' => [
+                'nullable',
+                function ($attribute, $value, $fail) use ($efrisConfig) {
+                    if (
+                        ($efrisConfig['buyer_type'] ?? '0') === '0' &&
+                        ($efrisConfig['invoice_industry_code'] ?? '101') === '101' &&
+                        ($efrisConfig['non_resident_flag'] ?? '0') === '0' &&
+                        empty($value)
+                    ) {
+                        $fail('The buyer TIN is required for resident organizations in industry 101.');
+                    }
+                }
+            ],
             'buyer_address' => 'nullable|string',
             'buyer_phone' => 'nullable|string|max:20',
             'buyer_email' => 'nullable|email',
@@ -216,11 +242,18 @@ class InvoiceController extends Controller
                 return redirect()->route('invoices.show', $invoice->invoice_id)
                     ->with('success', $result['message']);
             } else {
+                // Custom error handling for user-friendly messages
+                $userMessage = $result['message'];
+                if (str_contains($userMessage, 'buyerTin cannot be empty')) {
+                    $userMessage = 'The Buyer TIN is required for this invoice. Please enter a valid TIN and try again.';
+                }
+                // Add more custom error parsing as needed
+
                 \Log::error('Invoice submission failed', [
                     'invoice_id' => $invoice->invoice_id,
                     'result' => $result
                 ]);
-                return back()->with('error', $result['message']);
+                return back()->with('error', $userMessage);
             }
         } catch (\Exception $e) {
             \Log::error('Exception during invoice submission', [
