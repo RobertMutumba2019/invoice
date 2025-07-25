@@ -93,7 +93,27 @@ if ($buyerType === '0' && empty($buyerTin)) {
     return $invoice;
 }
 
+    /**
+     * Add an item to an invoice.
+     */
+    public function addItemToInvoice(Invoice $invoice, array $itemData)
+    {
+        $good = EfrisGood::find($itemData['good_id']);
 
+        $item = new InvoiceItem([
+            'invoice_id' => $invoice->invoice_id, // Ensure invoice_id is set
+            'good_id' => $itemData['good_id'],
+            'item_name' => $good ? $good->eg_name : ($itemData['item_name'] ?? 'Unknown'),
+            'item_code' => $good ? $good->eg_code : ($itemData['item_code'] ?? ''),
+            'quantity' => $itemData['quantity'],
+            'unit_price' => $itemData['unit_price'],
+            'tax_rate' => $itemData['tax_rate'] ?? ($good->eg_tax_rate ?? 0),
+            'uom' => $good ? $good->eg_uom : ($itemData['uom'] ?? ''),
+            'tax_category' => $good ? $good->eg_tax_category : ($itemData['tax_category'] ?? 'V'),
+        ]);
+        $item->calculateTotals();
+        $item->save(); // Save directly
+    }
 
     /**
      * Submit invoice to EFRIS.
@@ -298,6 +318,17 @@ if ($buyerType === '0' && empty($buyerTin)) {
             'buyer_type' => $buyerType
         ]);
         throw new \Exception('buyerTin cannot be empty for B2B transactions');
+    }
+    // Validate B2C: at least one of buyerTin, buyerNinBrn, buyerLegalName, buyerMobilePhone
+    if ($buyerType === '1' && empty($buyerTin) && empty($invoice->buyer_nin_brn) && empty($invoice->buyer_name) && empty($invoice->buyer_phone)) {
+        Log::error('Invalid payload: For B2C, all buyerTin, buyerNinBrn, buyerLegalName, and buyerMobilePhone are empty', [
+            'invoice_id' => $invoice->invoice_id,
+            'buyer_tin' => $buyerTin,
+            'buyer_nin_brn' => $invoice->buyer_nin_brn,
+            'buyer_name' => $invoice->buyer_name,
+            'buyer_phone' => $invoice->buyer_phone
+        ]);
+        throw new \Exception('For B2C, at least one of buyerTin, buyerNinBrn, buyerLegalName, or buyerMobilePhone must be provided.');
     }
 
     $contentArray = [

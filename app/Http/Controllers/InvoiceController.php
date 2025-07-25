@@ -67,6 +67,19 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $efrisConfig = app(\App\Services\EfrisService::class)->getEfrisConfig();
+
+        // B2C validation: at least one of buyer_tin, buyer_nin_brn, buyer_name, buyer_phone
+        if (($request->input('buyer_type') === '1' || $request->input('buyer_type') === 1)) {
+            if (
+                empty($request->input('buyer_tin')) &&
+                empty($request->input('buyer_nin_brn')) &&
+                empty($request->input('buyer_name')) &&
+                empty($request->input('buyer_phone'))
+            ) {
+                return back()->withErrors(['error' => 'For B2C, at least one of Buyer TIN, NIN/BRN, Name, or Mobile Phone must be provided.'])->withInput();
+            }
+        }
+
         $validator = $request->validate([
             'buyer_name' => 'required|string|max:255',
             'buyer_tin' => [
@@ -82,6 +95,7 @@ class InvoiceController extends Controller
                     }
                 }
             ],
+            'buyer_nin_brn' => 'nullable|string|max:255',
             'buyer_address' => 'nullable|string',
             'buyer_phone' => 'nullable|string|max:20',
             'buyer_email' => 'nullable|email',
@@ -150,6 +164,19 @@ class InvoiceController extends Controller
         }
 
         $efrisConfig = app(\App\Services\EfrisService::class)->getEfrisConfig();
+
+        // B2C validation: at least one of buyer_tin, buyer_nin_brn, buyer_name, buyer_phone
+        if (($request->input('buyer_type') === '1' || $request->input('buyer_type') === 1)) {
+            if (
+                empty($request->input('buyer_tin')) &&
+                empty($request->input('buyer_nin_brn')) &&
+                empty($request->input('buyer_name')) &&
+                empty($request->input('buyer_phone'))
+            ) {
+                return back()->withErrors(['error' => 'For B2C, at least one of Buyer TIN, NIN/BRN, Name, or Mobile Phone must be provided.'])->withInput();
+            }
+        }
+
         $validator = $request->validate([
             'buyer_name' => 'required|string|max:255',
             'buyer_tin' => [
@@ -165,6 +192,7 @@ class InvoiceController extends Controller
                     }
                 }
             ],
+            'buyer_nin_brn' => 'nullable|string|max:255',
             'buyer_address' => 'nullable|string',
             'buyer_phone' => 'nullable|string|max:20',
             'buyer_email' => 'nullable|email',

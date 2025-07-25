@@ -16,6 +16,7 @@ class Invoice extends Model
         'efris_invoice_no',
         'customer_id',
         'buyer_tin',
+        'buyer_nin_brn',
         'buyer_name',
         'buyer_address',
         'buyer_phone',

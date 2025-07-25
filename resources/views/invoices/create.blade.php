@@ -99,6 +99,15 @@
                         </div>
                         
                         <div class="col-md-6">
+                            <label for="buyer_nin_brn" class="form-label">Buyer NIN/BRN</label>
+                            <input type="text" class="form-control @error('buyer_nin_brn') is-invalid @enderror" 
+                                   id="buyer_nin_brn" name="buyer_nin_brn" value="{{ old('buyer_nin_brn') }}">
+                            @error('buyer_nin_brn')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <div class="col-md-6">
                             <label for="buyer_phone" class="form-label">Phone Number</label>
                             <input type="text" class="form-control @error('buyer_phone') is-invalid @enderror" 
                                    id="buyer_phone" name="buyer_phone" value="{{ old('buyer_phone') }}">
