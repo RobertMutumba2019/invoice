@@ -21,84 +21,79 @@ class EfrisService
         $prefix = 'INV';
         $year = date('Y');
         $month = date('m');
-        
+
         $lastInvoice = Invoice::whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->orderBy('invoice_id', 'desc')
             ->first();
-        
+
         $sequence = $lastInvoice ? (intval(substr($lastInvoice->invoice_no, -4)) + 1) : 1;
-        
+
         return $prefix . $year . $month . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
     /**
      * Create a new invoice.
      */
+
     public function createInvoice($data)
-    {
-        $invoice = Invoice::create([
-            'invoice_no' => $this->generateInvoiceNumber(),
-            'buyer_tin' => $data['buyer_tin'] ?? null,
-            'buyer_name' => $data['buyer_name'],
-            'buyer_address' => $data['buyer_address'] ?? null,
-            'buyer_phone' => $data['buyer_phone'] ?? null,
-            'buyer_email' => $data['buyer_email'] ?? null,
-            'currency' => $data['currency'] ?? 'UGX',
-            'invoice_type' => $data['invoice_type'] ?? 'LOCAL',
-            'status' => 'DRAFT',
-            'remarks' => $data['remarks'] ?? null,
-            'created_by' => auth()->id(),
-            'invoice_date' => $data['invoice_date'] ?? now(),
-            'invoice_amount' => 0,
-            'tax_amount' => 0,
-            'total_amount' => 0,
-        ]);
 
-        // Add items to invoice
-        if (isset($data['items']) && is_array($data['items'])) {
-            foreach ($data['items'] as $itemData) {
-                $this->addItemToInvoice($invoice, $itemData);
-            }
+{
+
+    Log::info('createInvoice input data', ['data' => $data]); // Log input for debugging
+
+    // Validate buyer_tin for B2B transactions
+    $buyerTin = $data['buyer_tin'] ?? null;
+    $buyerType = isset($data['buyer_type']) ? $data['buyer_type'] : ((empty($buyerTin) || strlen($buyerTin) < 10) ? '1' : '0');
+
+    // Explicitly validate: if B2B and buyerTin is empty, throw error
+if ($buyerType === '0' && empty($buyerTin)) {
+    Log::error('Invalid input: buyer_tin is empty for B2B transaction', ['data' => $data]);
+    throw new \Exception('Buyer TIN is required for B2B transactions');
+}
+
+
+    $invoice = Invoice::create([
+        'invoice_no' => $this->generateInvoiceNumber(),
+        'buyer_tin' => $buyerTin,
+        'buyer_name' => $data['buyer_name'] ?? 'Unknown Buyer',
+        'buyer_type' => $data['buyer_type'] ?? $buyerType,
+        'buyer_address' => $data['buyer_address'] ?? null,
+        'buyer_phone' => $data['buyer_phone'] ?? null,
+        'buyer_email' => $data['buyer_email'] ?? null,
+        'currency' => $data['currency'] ?? 'UGX',
+        'invoice_type' => $data['invoice_type'] ?? 'LOCAL',
+        'status' => 'DRAFT',
+        'remarks' => $data['remarks'] ?? null,
+        'created_by' => auth()->id(),
+        'invoice_date' => $data['invoice_date'] ?? now(),
+        'invoice_amount' => 0,
+        'tax_amount' => 0,
+        'total_amount' => 0,
+    ]);
+
+    // Add items to invoice
+    if (isset($data['items']) && is_array($data['items'])) {
+        foreach ($data['items'] as $itemData) {
+            $this->addItemToInvoice($invoice, $itemData);
         }
-
-        // Calculate totals
-        $invoice->calculateTotals();
-
-        AuditTrail::register('INVOICE_CREATED', "Invoice {$invoice->invoice_no} created", 'invoices');
-
-        return $invoice;
     }
 
-    /**
-     * Add item to invoice.
-     */
-    public function addItemToInvoice($invoice, $itemData)
-    {
-        $good = EfrisGood::find($itemData['good_id']);
-        
-        if (!$good) {
-            throw new \Exception('Good not found');
-        }
+    // Calculate totals
+    $invoice->calculateTotals();
 
-        $item = InvoiceItem::create([
-            'invoice_id' => $invoice->invoice_id,
-            'good_id' => $good->eg_id,
-            'item_name' => $good->eg_name,
-            'item_code' => $good->eg_code,
-            'quantity' => $itemData['quantity'],
-            'unit_price' => $itemData['unit_price'] ?? $good->eg_price,
-            'uom' => $good->eg_uom,
-            'tax_category' => $good->eg_tax_category,
-            'tax_rate' => $good->eg_tax_rate,
-            'total_amount' => 0,
-            'tax_amount' => 0,
-        ]);
+    Log::info('Invoice created', [
+        'invoice_id' => $invoice->invoice_id,
+        'buyer_tin' => $invoice->buyer_tin,
+        'buyer_type' => $invoice->buyer_type
+    ]);
 
-        $item->calculateTotals();
+    AuditTrail::register('INVOICE_CREATED', "Invoice {$invoice->invoice_no} created", 'invoices');
 
-        return $item;
-    }
+    return $invoice;
+}
+
+
 
     /**
      * Submit invoice to EFRIS.
@@ -107,7 +102,7 @@ class EfrisService
     {
         try {
             $config = $this->getEfrisConfig();
-            
+
             // Validate invoice before submission
             if (!$invoice->items || $invoice->items->count() === 0) {
                 throw new \Exception('Invoice must have at least one item');
@@ -129,7 +124,7 @@ class EfrisService
                 'api_url' => $config['api_url'],
                 'payload' => $jsonPayload
             ]);
-            
+
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
@@ -144,12 +139,12 @@ class EfrisService
 
             if ($response->successful()) {
                 $responseData = $response->json();
-                
+
                 Log::info('EFRIS API response parsed', [
                     'invoice_id' => $invoice->invoice_id,
                     'response_data' => $responseData
                 ]);
-                
+
                 if (isset($responseData['returnStateInfo']['returnCode']) && $responseData['returnStateInfo']['returnCode'] === 'SUCCESS') {
                     $invoice->update([
                         'status' => 'SUBMITTED',
@@ -159,7 +154,7 @@ class EfrisService
                     ]);
 
                     AuditTrail::register('INVOICE_SUBMITTED', "Invoice {$invoice->invoice_no} submitted to EFRIS", 'invoices');
-                    
+
                     return [
                         'success' => true,
                         'message' => 'Invoice submitted successfully',
@@ -227,7 +222,8 @@ class EfrisService
         'payment_mode' => SystemSetting::getValue('efris_payment_mode', '102'),
         'operation_type' => SystemSetting::getValue('efris_operation_type', '101'),
         'nin_brn' => SystemSetting::getValue('efris_nin_brn', '4988'),
-        'buyer_type' => SystemSetting::getValue('efris_buyer_type', '0'),
+        'buyer_type' => SystemSetting::getValue('efris_buyer_type', '1'),
+        'buyer_tin' => SystemSetting::getValue('efris_buyer_tin', '1000023516'),
         'non_resident_flag' => SystemSetting::getValue('efris_non_resident_flag', '0'),
         'invoice_kind' => SystemSetting::getValue('efris_invoice_kind', '1'),
         'is_batch' => SystemSetting::getValue('efris_is_batch', '0'),
@@ -240,10 +236,10 @@ class EfrisService
     {
         try {
             $config = $this->getEfrisConfig();
-            
+
             // Make a simple API call to test connection
             $response = Http::timeout(30)->get($config['api_url'] . 'test');
-            
+
             if ($response->successful()) {
                 return ['success' => true, 'message' => 'Connection successful'];
             } else {
@@ -257,12 +253,13 @@ class EfrisService
     /**
      * Build EFRIS API payload.
      */
- 
+
+
 
     protected function buildEfrisPayload($invoice)
 {
     $config = $this->getEfrisConfig();
-    
+
     // Generate a unique reference number
     $generatedReferenceNo = 'TCS' . str_replace('-', '', (string) \Str::uuid()) . substr((string) microtime(true), -4);
 
@@ -281,20 +278,26 @@ class EfrisService
         ];
     }
 
-    $requestTime = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 2025-07-24 13:19:00
-    $issuedDate = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'); // 2025-07-24 13:19:00
-    Log::info('EFRIS Payload RequestTime and IssuedDate', [
-        'invoice_id' => $invoice->invoice_id,
-        'requestTime' => $requestTime,
-        'issuedDate' => $issuedDate,
-        'server_time' => date('Y-m-d H:i:s'),
-        'server_timezone' => date_default_timezone_get()
-    ]);
+    $requestTime = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s');
+    $issuedDate = Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s');
 
-    // Validate buyerTin
+    // Use invoice->buyer_type, fallback to config
+    $buyerType = $invoice->buyer_type ?? ($config['buyer_type'] ?? '0');
     $buyerTin = $invoice->buyer_tin;
-    if (empty($buyerTin) && ($config['buyer_type'] ?? '0') === '0' && ($config['invoice_industry_code'] ?? '101') === '101' && ($config['non_resident_flag'] ?? '0') === '0') {
-        throw new \Exception('buyerTin cannot be empty when buyerType is 0, invoiceIndustry is 101, and nonResidentFlag is 0');
+
+    // For B2C, use a dummy TIN if required by EFRIS (verify with URA documentation)
+    if ($buyerType === '1' && empty($buyerTin)) {
+        $buyerTin = '9999999999'; // Dummy TIN for B2C, adjust if needed
+    }
+
+    // Validate buyerTin for B2B
+    if ($buyerType === '0' && empty($buyerTin)) {
+        Log::error('Invalid payload: buyerTin is empty for B2B transaction', [
+            'invoice_id' => $invoice->invoice_id,
+            'buyer_tin' => $invoice->buyer_tin,
+            'buyer_type' => $buyerType
+        ]);
+        throw new \Exception('buyerTin cannot be empty for B2B transactions');
     }
 
     $contentArray = [
@@ -324,7 +327,7 @@ class EfrisService
             'placeOfBusiness' => $config['place_of_business'] ?? 'Default Location',
         ],
         'buyerDetails' => [
-            'tin' => $buyerTin ?? '', // Use only if valid, otherwise empty
+            'tin' => $buyerTin ?? '',
             'ninBrn' => $invoice->buyer_nin_brn ?? '',
             'legalName' => $invoice->buyer_name ?? 'Unknown Buyer',
             'businessName' => $invoice->buyer_name ?? 'Unknown Buyer',
@@ -335,8 +338,8 @@ class EfrisService
             'placeOfBusiness' => $invoice->buyer_place_of_business ?? 'Unknown',
             'buyerCitizenship' => $invoice->buyer_citizenship ?? 'UG-Uganda',
             'buyerPlaceOfBusi' => $invoice->buyer_place_of_business ?? 'Unknown',
-            'buyerType' => $config['buyer_type'] ?? '0', // Added from Django
-            'nonResidentFlag' => $config['non_resident_flag'] ?? '0', // Added to control validation
+            'buyerType' => $buyerType,
+            'nonResidentFlag' => $config['non_resident_flag'] ?? '0',
         ],
         'goodsDetails' => $items,
         'summary' => [
@@ -373,6 +376,8 @@ class EfrisService
     $base64Content = base64_encode(json_encode($contentArray));
     Log::info('EFRIS Payload Content', [
         'invoice_id' => $invoice->invoice_id,
+        'buyer_tin' => $buyerTin,
+        'buyer_type' => $buyerType,
         'content_array' => $contentArray,
         'base64_content' => $base64Content
     ]);
@@ -412,106 +417,8 @@ class EfrisService
         ]
     ];
 }
- 
-    /**
-     * Submit credit note to EFRIS.
-     */
-    public function submitCreditNote($creditNote)
-    {
-        try {
-            // Validate credit note before submission
-            if (!$creditNote->items || $creditNote->items->count() === 0) {
-                throw new \Exception('Credit note must have at least one item');
-            }
 
-            if (empty($creditNote->buyer_name)) {
-                throw new \Exception('Buyer name is required');
-            }
 
-            if ($creditNote->total_amount <= 0) {
-                throw new \Exception('Credit note total amount must be greater than zero');
-            }
-
-            $payload = $this->buildCreditNotePayload($creditNote);
-            
-            Log::info('Submitting credit note to EFRIS', [
-                'credit_note_id' => $creditNote->cn_id,
-                'credit_note_no' => $creditNote->cn_no,
-                'api_url' => $this->apiUrl . 'submitCreditNote',
-                'payload' => $payload
-            ]);
-            
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->timeout(30)->post($this->apiUrl . 'submitCreditNote', $payload);
-
-            Log::info('EFRIS credit note API response received', [
-                'credit_note_id' => $creditNote->cn_id,
-                'status_code' => $response->status(),
-                'response_body' => $response->body(),
-                'response_headers' => $response->headers()
-            ]);
-
-            if ($response->successful()) {
-                $responseData = $response->json();
-                
-                Log::info('EFRIS credit note API response parsed', [
-                    'credit_note_id' => $creditNote->cn_id,
-                    'response_data' => $responseData
-                ]);
-                
-                if (isset($responseData['returnStateInfo']['returnCode']) && $responseData['returnStateInfo']['returnCode'] === 'SUCCESS') {
-                    $creditNote->update([
-                        'status' => 'SUBMITTED',
-                        'efris_cn_no' => $responseData['data']['creditNoteNo'] ?? null,
-                        'fdn' => $responseData['data']['fdn'] ?? null,
-                        'qr_code' => $responseData['data']['qrCode'] ?? null,
-                        'efris_response' => $responseData,
-                    ]);
-
-                    AuditTrail::register('CREDIT_NOTE_SUBMITTED', "Credit note {$creditNote->cn_no} submitted to EFRIS", 'credit_notes');
-                    
-                    return [
-                        'success' => true,
-                        'message' => 'Credit note submitted successfully',
-                        'data' => $responseData
-                    ];
-                } else {
-                    $errorMessage = $responseData['returnStateInfo']['returnMessage'] ?? 'Unknown EFRIS API error';
-                    Log::error('EFRIS credit note API returned error', [
-                        'credit_note_id' => $creditNote->cn_id,
-                        'return_code' => $responseData['returnStateInfo']['returnCode'] ?? 'UNKNOWN',
-                        'return_message' => $errorMessage,
-                        'full_response' => $responseData
-                    ]);
-                    throw new \Exception($errorMessage);
-                }
-            } else {
-                Log::error('EFRIS credit note API HTTP error', [
-                    'credit_note_id' => $creditNote->cn_id,
-                    'status_code' => $response->status(),
-                    'response_body' => $response->body(),
-                    'response_headers' => $response->headers()
-                ]);
-                throw new \Exception('Failed to connect to EFRIS API: HTTP ' . $response->status());
-            }
-        } catch (\Exception $e) {
-            Log::error('EFRIS credit note submission failed: ' . $e->getMessage(), [
-                'credit_note_id' => $creditNote->cn_id,
-                'credit_note_no' => $creditNote->cn_no,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            AuditTrail::register('CREDIT_NOTE_SUBMISSION_FAILED', "Failed to submit credit note {$creditNote->cn_no}: {$e->getMessage()}", 'credit_notes');
-
-            return [
-                'success' => false,
-                'message' => 'Failed to submit credit note: ' . $e->getMessage()
-            ];
-        }
-    }
 
     /**
      * Build EFRIS credit note API payload.
@@ -649,7 +556,7 @@ class EfrisService
             ]);
 
             $payload = $this->buildStockPayload($stock);
-            
+
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
@@ -663,10 +570,10 @@ class EfrisService
 
             if ($response->successful()) {
                 $responseData = $response->json();
-                
+
                 if (isset($responseData['returnStateInfo']['returnCode']) && $responseData['returnStateInfo']['returnCode'] === 'SUCCESS') {
                     AuditTrail::register('STOCK_PUSHED', "Stock increase {$stock->id} pushed to EFRIS", 'stocks');
-                    
+
                     return [
                         'success' => true,
                         'message' => 'Stock pushed successfully',
@@ -708,7 +615,7 @@ class EfrisService
             ]);
 
             $payload = $this->buildStockDecreasePayload($stockDecrease);
-            
+
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
@@ -722,10 +629,10 @@ class EfrisService
 
             if ($response->successful()) {
                 $responseData = $response->json();
-                
+
                 if (isset($responseData['returnStateInfo']['returnCode']) && $responseData['returnStateInfo']['returnCode'] === 'SUCCESS') {
                     AuditTrail::register('STOCK_DECREASE_PUSHED', "Stock decrease {$stockDecrease->id} pushed to EFRIS", 'stock_decreases');
-                    
+
                     return [
                         'success' => true,
                         'message' => 'Stock decrease pushed successfully',
@@ -788,7 +695,7 @@ class EfrisService
                     'interfaceCode' => 'T128',
                     'requestCode' => 'TP',
                     'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
-                    
+
 
                     'responseCode' => 'TA',
                     'taxpayerID' => '723542954718704352',
@@ -801,7 +708,7 @@ class EfrisService
                     'returnMessage' => ''
                 ]
             ];
-            
+
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
@@ -809,11 +716,11 @@ class EfrisService
 
             if ($response->successful()) {
                 $responseData = $response->json();
-                
+
                 if (isset($responseData['returnStateInfo']['returnCode']) && $responseData['returnStateInfo']['returnCode'] === 'SUCCESS') {
                     $content = base64_decode($responseData['data']['content']);
                     $stockData = json_decode($content, true);
-                    
+
                     return [
                         'success' => true,
                         'quantity' => $stockData['stock'] ?? 0,
@@ -884,7 +791,7 @@ class EfrisService
                 'interfaceCode' => 'T131',
                 'requestCode' => 'TP',
                 'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
-           
+
 
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
@@ -942,7 +849,7 @@ class EfrisService
                 'interfaceCode' => 'T132',
                 'requestCode' => 'TP',
                 'requestTime' => Carbon::now('Africa/Nairobi')->format('Y-m-d H:i:s'),
-             
+
 
                 'responseCode' => 'TA',
                 'taxpayerID' => '723542954718704352',
@@ -956,4 +863,4 @@ class EfrisService
             ]
         ];
     }
-} 
+}

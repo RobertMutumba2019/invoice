@@ -60,6 +60,36 @@
             </div>
         </div>
 
+        @if(in_array($invoice->status, ['SUBMITTED', 'APPROVED']))
+        <!-- EFRIS Response Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    EFRIS Response Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        @if($invoice->efris_invoice_no)
+                        <p><strong>EFRIS Invoice No:</strong> {{ $invoice->efris_invoice_no }}</p>
+                        @endif
+                        @if($invoice->fdn)
+                        <p><strong>FDN:</strong> {{ $invoice->fdn }}</p>
+                        @endif
+                    </div>
+                    <div class="col-md-6">
+                        @if($invoice->qr_code)
+                        <p><strong>QR Code:</strong></p>
+                        <img src="data:image/png;base64,{{ $invoice->qr_code }}" alt="QR Code" style="max-width: 150px;" />
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Buyer Information -->
         <div class="card mb-4">
             <div class="card-header">
