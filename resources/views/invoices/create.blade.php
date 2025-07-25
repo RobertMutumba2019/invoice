@@ -125,6 +125,18 @@
                             @enderror
                         </div>
                         
+                        <div class="col-md-6">
+                            <label for="buyer_type" class="form-label">Buyer Type *</label>
+                            <select class="form-select @error('buyer_type') is-invalid @enderror" id="buyer_type" name="buyer_type" required>
+                                <option value="">Select Buyer Type</option>
+                                <option value="0" {{ old('buyer_type') == '0' ? 'selected' : '' }}>B2B</option>
+                                <option value="1" {{ old('buyer_type') == '1' ? 'selected' : '' }}>B2C</option>
+                            </select>
+                            @error('buyer_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
                         <div class="col-12">
                             <label for="buyer_address" class="form-label">Address</label>
                             <textarea class="form-control @error('buyer_address') is-invalid @enderror" 

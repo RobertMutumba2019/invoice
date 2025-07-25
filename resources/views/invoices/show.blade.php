@@ -105,6 +105,12 @@
                         @if($invoice->buyer_tin)
                         <p><strong>TIN:</strong> {{ $invoice->buyer_tin }}</p>
                         @endif
+                        @if($invoice->buyer_nin_brn)
+                        <p><strong>NIN/BRN:</strong> {{ $invoice->buyer_nin_brn }}</p>
+                        @endif
+                        <p><strong>Buyer Type:</strong> 
+                            @if($invoice->buyer_type == '1') B2C @elseif($invoice->buyer_type == '0') B2B @else N/A @endif
+                        </p>
                         @if($invoice->buyer_phone)
                         <p><strong>Phone:</strong> {{ $invoice->buyer_phone }}</p>
                         @endif

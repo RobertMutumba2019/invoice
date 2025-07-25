@@ -137,6 +137,7 @@ if ($buyerType === '0' && empty($buyerTin)) {
             }
 
             $payload = $this->buildEfrisPayload($invoice);
+            Log::info('EFRIS payload', ['payload' => $payload]);
             $jsonPayload = json_encode($payload);
             Log::info('Submitting invoice to EFRIS', [
                 'invoice_id' => $invoice->invoice_id,

@@ -107,6 +107,7 @@ class InvoiceController extends Controller
             'items.*.good_id' => 'required|exists:efris_goods,eg_id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'buyer_type' => 'required|in:0,1',
         ]);
 
         try {
@@ -204,6 +205,7 @@ class InvoiceController extends Controller
             'items.*.good_id' => 'required|exists:efris_goods,eg_id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'buyer_type' => 'required|in:0,1',
         ]);
 
         try {

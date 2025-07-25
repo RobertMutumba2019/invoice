@@ -21,6 +21,7 @@ class Invoice extends Model
         'buyer_address',
         'buyer_phone',
         'buyer_email',
+        'buyer_type',
         'invoice_amount',
         'tax_amount',
         'total_amount',
